@@ -1,33 +1,39 @@
 package main
 
 import (
-	"net/http"
-	"observAndOptim/middleware"
+	"elastic/handler"
+	"elastic/l"
+	"elastic/store"
 
-	"github.com/gorilla/mux"
-	"github.com/prometheus/client_golang/prometheus/promhttp"
+	"github.com/go-martini/martini"
+	"github.com/martini-contrib/render"
 )
 
+// Переписать не на Martini
 func main() {
-	r := mux.NewRouter()
-
-	metricsMiddleware := middleware.NewMetricsMiddleware()
-
-	r.Handle("/metrics", promhttp.Handler())
-	r.HandleFunc("/alert", alertHandler).Methods(http.MethodGet)
-	r.HandleFunc("/simple", simpleHandler).Methods(http.MethodPost)
-
-	r.Use(metricsMiddleware.Metrics)
-
-	http.ListenAndServe(":8080", r)
+	//Sentry error handler
+	//sentry.Init(sentry.Client(os.Getenv("SENTRY_DSN")))
+	//Initialize Stores
+	articleStore, err := store.NewArticleStore()
+	parseErr(err)
+	//Initialize Handlers
+	articleHandler := handler.NewArticleHandler(articleStore)
+	//Initialize Router
+	m := martini.Classic()
+	m.Use(render.Renderer())
+	//Routes
+	m.Get("/article/id/:id", articleHandler.Id)
+	m.Post("/article/add", articleHandler.Add)
+	m.Post("/article/search", articleHandler.Search)
+	panicHandler := handler.PanicHandler{}
+	m.Get("/panic", panicHandler.Handle)
+	m.Post("/log/add", panicHandler.Log)
+	m.Run()
 }
 
-func alertHandler(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusOK)
-	w.Write([]byte("Alert\n"))
-}
-
-func simpleHandler(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusOK)
-	w.Write([]byte("Simple\n"))
+func parseErr(err error) {
+	if err != nil {
+		l.F(err)
+	}
+	l.Log.Log("Application started")
 }

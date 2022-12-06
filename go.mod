@@ -1,20 +1,17 @@
-module observAndOptim
+module elastic
 
 go 1.18
 
 require (
-	github.com/gorilla/mux v1.8.0
-	github.com/prometheus/client_golang v1.12.2
+	github.com/elastic/go-elasticsearch/v8 v8.3.0
+	github.com/google/uuid v1.3.0
 )
 
 require (
-	github.com/beorn7/perks v1.0.1 // indirect
-	github.com/cespare/xxhash/v2 v2.1.2 // indirect
-	github.com/golang/protobuf v1.5.2 // indirect
-	github.com/matttproud/golang_protobuf_extensions v1.0.1 // indirect
-	github.com/prometheus/client_model v0.2.0 // indirect
-	github.com/prometheus/common v0.32.1 // indirect
-	github.com/prometheus/procfs v0.7.3 // indirect
-	golang.org/x/sys v0.0.0-20220114195835-da31bd327af9 // indirect
-	google.golang.org/protobuf v1.26.0 // indirect
+	github.com/codegangsta/inject v0.0.0-20150114235600-33e0aa1cb7c0 // indirect
+	github.com/elastic/elastic-transport-go/v8 v8.0.0-20211216131617-bbee439d559c // indirect
+	github.com/go-martini/martini v0.0.0-20170121215854-22fa46961aab // indirect
+	github.com/martini-contrib/render v0.0.0-20150707142108-ec18f8345a11 // indirect
+	github.com/mitchellh/mapstructure v1.5.0 // indirect
+	github.com/oxtoacart/bpool v0.0.0-20190530202638-03653db5a59c // indirect
 )

@@ -1,65 +1,83 @@
 version: "3"
 services:
-  prometheus:
-    image: prom/prometheus:latest
+#elastic search
+  elasticsearch:
+    image: elasticsearch:8.3.3
+    container_name: elasticsearch
+    environment:
+      - xpack.security.enabled=false
+      - discovery.type=single-node
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+      nofile:
+        soft: 65536
+        hard: 65536
+    cap_add:
+      - IPC_LOCK
     volumes:
-      - ./prometheus:/etc/prometheus/
-    command:
-      - '--config.file=/etc/prometheus/prometheus.yml'
-      - '--storage.tsdb.path=/prometheus'
-    links:
-      - alertmanager:alertmanager
-    restart: always
-    deploy:
-      mode: global
+      - elasticsearch-data:/usr/share/elasticsearch/data
     ports:
-      - 9090:9090
-    depends_on:
-      - go-service-with-metrics
-  node-exporter:
-    image: prom/node-exporter
-    command:
-      - --collector.filesystem.ignored-mount-points
-      - "^/(sys|proc|dev|host|etc|rootfs/var/lib/docker/containers|rootfs/var/lib/docker/overlay2|rootfs/run/docker/netns|rootfs/var/lib/docker/aufs)($$|/)"
-    ports:
-      - 9100:9100
-    restart: always
-    deploy:
-      mode: global
+      - 9200:9200
+      - 9300:9300
 
-  go-service-with-metrics:
-    build: .
-    ports:
-      - 8080:8080
-
-  grafana:
-    image: grafana/grafana:latest
-    ports:
-      - 3000:3000
-    depends_on:
-      - prometheus
-  alertmanager:
-    image: prom/alertmanager:latest
+  kibana:
+    container_name: kibana
+    image: kibana:8.3.3
+    environment:
+      ELASTICSEARCH_URL: http://localhost:9200
+      ELASTICSEARCH_HOSTS: http://localhost:9200
     volumes:
-      - ./alertmanager:/etc/alertmanager/
-    command:
-      - '--config.file=/etc/alertmanager/config.yml'
-      - '--storage.path=/etc/alertmanager/data'
+      - ./kibana.yml:/usr/share/kibana/config/kibana.yml
     ports:
-      - 9093:9093
-  pushgateway:
-    image: prom/pushgateway:latest
-    ports:
-      - 9091:9091
+      - 5601:5601
     depends_on:
-      - prometheus
-  telegram-alertmanager-bot:
-    image: moghaddas/prometheus_bot
-    volumes:
-      - ./telegram:/etc/telegram/
-    command:
-      - '-c=/etc/telegram/config.yml'
-    ports:
-      - 9087:9087
+      - elasticsearch
+  logstash:
+    container_name: logstash
+    image: logstash:8.3.3
     depends_on:
-      - alertmanager
+      - elasticsearch
+    ports:
+      - "5044:5044"
+      - "50000:50000/tcp"
+      - "50000:50000/udp"
+      - "9600:9600"
+  # nginx:
+  #   image: nginx
+  #   container_name: nginx
+  #   ports:
+  #     - 80:80
+  #   logging:
+  #     driver: "fluentd"
+  #     options:
+  #       fluentd-async-connect: "true"
+  #       fluentd-address: localhost:24224
+  #       tag: fluentd
+  #   networks:
+  #     - elasticsearch
+  # fluentd:
+  #   build: ./fluentd
+  #   container_name: fluentd
+  #   volumes:
+  #     - ./fluentd/conf:/fluentd/etc
+  #   ports:
+  #     - "24224:24224"
+  #     - "24224:24224/udp"
+  #   networks:
+  #     - elasticsearch
+  # apm-server:
+  #   image: elastic/apm-server:8.3.3
+  #   container_name: apm-server
+  #   volumes:
+  #     - ./apm_elastic/apm-server.yml:/usr/share/apm-server/apm-server.yml
+  #   environment:
+  #     - output.elasticsearch.hosts=["localhost:9200"]
+  #   ports:
+  #     - "8200:8200"
+  #   networks:
+  #     - elasticsearch
+volumes:
+  elasticsearch-data:
+    driver: local
