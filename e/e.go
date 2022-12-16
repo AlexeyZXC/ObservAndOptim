@@ -145,7 +145,7 @@ func (e E) GetId(i I) string {
 			field := typeOf.Field(i)
 			tag, ok := field.Tag.Lookup("json")
 			if ok {
-				if tag == "id" {
+				if tag == "id,omitempty" {
 					idField := v.Field(i)
 					idType := idField.Type()
 					if idType.Kind() == reflect.String {

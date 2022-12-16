@@ -21,6 +21,11 @@ var FatalFunc = log.Fatal
 func F(i interface{}) {
 	FatalFunc(Parse(i))
 }
+
+func L(i interface{}) {
+	LogFunc(Parse(i))
+}
+
 func Parse(i interface{}) interface{} {
 	typeOf := reflect.TypeOf(i)
 	if typeOf.Kind() == reflect.Map {
@@ -61,7 +66,4 @@ func Parse(i interface{}) interface{} {
 		return result
 	}
 	return i
-}
-func L(i interface{}) {
-	LogFunc(Parse(i))
 }

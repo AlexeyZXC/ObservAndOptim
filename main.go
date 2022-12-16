@@ -37,7 +37,7 @@ func main() {
 	r.Use(render_chi.SetContentType(render_chi.ContentTypeJSON))
 
 	//routes
-	r.Get("Get", articleHandler.Id_chi)
+	r.Get("/article/id/{id}", articleHandler.Id_chi)
 	r.Post("/article/add", articleHandler.Add_chi)
 	r.Post("/article/search", articleHandler.Search_chi)
 	//panic
