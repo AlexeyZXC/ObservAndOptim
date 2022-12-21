@@ -9,17 +9,20 @@ import (
 
 	"github.com/go-chi/chi/v5"
 	render_chi "github.com/go-chi/render"
+	"github.com/opentracing/opentracing-go"
+	"github.com/opentracing/opentracing-go/log"
 
 	"github.com/go-martini/martini"
 	"github.com/martini-contrib/render"
 )
 
 type ArticleHandler struct {
-	S store.ArticleStore
+	S      store.ArticleStore
+	Tracer opentracing.Tracer
 }
 
-func NewArticleHandler(s store.ArticleStore) ArticleHandler {
-	return ArticleHandler{S: s}
+func NewArticleHandler(s store.ArticleStore, t opentracing.Tracer) ArticleHandler {
+	return ArticleHandler{S: s, Tracer: t}
 }
 func (h ArticleHandler) Id(r render.Render, params martini.Params) (interface{}, error) {
 	id := params["id"]
@@ -33,10 +36,13 @@ func (h ArticleHandler) Id(r render.Render, params martini.Params) (interface{},
 }
 
 func (h ArticleHandler) Id_chi(w http.ResponseWriter, r *http.Request) {
+	span, ctx := opentracing.StartSpanFromContextWithTracer(r.Context(), h.Tracer, "Id path called")
+	defer span.Finish()
+
 	id := chi.URLParam(r, "id")
-	ctx := context.Background()
 	article, err := h.S.Get(ctx, id)
 	if err != nil {
+		span.LogFields(log.Error(err), log.String("id", id))
 		render_chi.Status(r, http.StatusInternalServerError)
 		render_chi.JSON(w, r, err)
 		return

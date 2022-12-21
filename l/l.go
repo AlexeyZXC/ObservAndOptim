@@ -5,14 +5,46 @@ import (
 	"fmt"
 	"log"
 	"reflect"
+
+	"go.uber.org/zap"
 )
 
-type Logger struct{}
+type Logger struct {
+	logger *zap.Logger
+}
 
-var Log Logger = Logger{}
+//var Log Logger = Logger{ }
 
-func (i Logger) Log(input interface{}) {
+func CreateZapLogger() (Logger, error) {
+	logger, err := zap.NewDevelopment()
+	if err != nil {
+		return Logger{}, err
+	}
+	log := Logger{logger: logger}
 
+	return log, nil
+}
+
+func (i Logger) Sync() error {
+	return i.logger.Sync()
+}
+
+func (i Logger) Log(msg string) {
+	i.logger.Log(zap.DebugLevel, msg)
+}
+
+func (i Logger) Error(str string) {
+	i.logger.Error(str)
+}
+
+func (i Logger) Infof(msg string, args ...interface{}) {
+	// fs := []zapcore.Field{}
+	// for _, v := range args {
+	// 	f := zapcore.Field{Interface: v}
+	// 	fs = append(fs, f)
+	// }
+
+	i.logger.Sugar().Infof(msg, args...)
 }
 
 var LogFunc = log.Println

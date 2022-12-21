@@ -4,33 +4,52 @@ import (
 	"elastic/handler"
 	"elastic/l"
 	"elastic/store"
+	"fmt"
+	"io"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
 	render_chi "github.com/go-chi/render"
+	"github.com/opentracing/opentracing-go"
+	"github.com/uber/jaeger-client-go/config"
 )
 
-// Переписать не на Martini
+//func initJaeger(service string, logger *zap.Logger) (opentracing.Tracer, io.Closer) {
+func initJaeger(service string, logger l.Logger) (opentracing.Tracer, io.Closer) {
+	cfg := &config.Configuration{
+		ServiceName: service,
+		Sampler: &config.SamplerConfig{
+			Type:  "const",
+			Param: 1,
+		},
+		Reporter: &config.ReporterConfig{
+			LogSpans: true,
+		},
+	}
+	tracer, closer, err := cfg.NewTracer(config.Logger(logger))
+	if err != nil {
+		panic(fmt.Sprintf("ERROR: cannot init Jaeger: %v\n", err))
+	}
+	return tracer, closer
+}
+
 func main() {
-	//Sentry error handler
-	//sentry.Init(sentry.Client(os.Getenv("SENTRY_DSN")))
+
+	logger, err := l.CreateZapLogger()
+	if err != nil {
+		panic(err)
+	}
+
+	defer logger.Sync()
+
+	tracer, closer := initJaeger("example", logger)
+	defer closer.Close()
+
 	//Initialize Stores
 	articleStore, err := store.NewArticleStore()
-	parseErr(err)
+	parseErr(err, &logger)
 	//Initialize Handlers
-	articleHandler := handler.NewArticleHandler(articleStore)
-
-	//initialize router martini
-	//m := martini.Classic()
-	//m.Use(render.Renderer())
-	//Routes
-	// m.Get("/article/id/:id", articleHandler.Id)
-	// m.Post("/article/add", articleHandler.Add)
-	// m.Post("/article/search", articleHandler.Search)
-	// panicHandler := handler.PanicHandler{}
-	// m.Get("/panic", panicHandler.Handle)
-	// m.Post("/log/add", panicHandler.Log)
-	//m.Run()
+	articleHandler := handler.NewArticleHandler(articleStore, tracer)
 
 	// chi
 	r := chi.NewRouter()
@@ -48,9 +67,9 @@ func main() {
 	http.ListenAndServe(":3333", r)
 }
 
-func parseErr(err error) {
+func parseErr(err error, logger *l.Logger) {
 	if err != nil {
-		l.F(err)
+		logger.Error(err.Error())
 	}
-	l.Log.Log("Application started")
+	logger.Infof("Application started")
 }
