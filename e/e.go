@@ -11,6 +11,8 @@ import (
 	"github.com/elastic/go-elasticsearch/v8"
 	"github.com/elastic/go-elasticsearch/v8/esapi"
 	"github.com/google/uuid"
+	"github.com/opentracing/opentracing-go"
+	"github.com/opentracing/opentracing-go/log"
 )
 
 type E struct {
@@ -69,9 +71,10 @@ func (e E) Insert(ctx context.Context, i I) error {
 		return err
 	}
 	defer res.Body.Close()
-	l.L(res.Status())
+	l.L("insert status:" + res.Status())
 	return nil
 }
+
 func (e E) Search(ctx context.Context, q string) (SearchResponse, error) {
 	var r SearchResponse
 	var buf bytes.Buffer
@@ -104,19 +107,25 @@ func (e E) Search(ctx context.Context, q string) (SearchResponse, error) {
 	}
 	return r, nil
 }
+
 func (e E) Get(ctx context.Context, id string) (M, error) {
+	span, s_ctx := opentracing.StartSpanFromContext(ctx, "E Get called")
+	defer span.Finish()
+
 	req := esapi.GetRequest{
 		Index:      e.IndexName,
 		DocumentID: id,
 	}
-	res, err := req.Do(ctx, e.C)
+	res, err := req.Do(s_ctx, e.C)
 	if err != nil {
+		span.LogFields(log.Error(err))
 		return nil, err
 	}
 	defer res.Body.Close()
 	l.L(res.Status())
 	var r M
 	if err := json.NewDecoder(res.Body).Decode(&r); err != nil {
+		span.LogFields(log.Error(err))
 		return nil, err
 	}
 	return r, nil

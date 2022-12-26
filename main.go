@@ -14,7 +14,7 @@ import (
 	"github.com/uber/jaeger-client-go/config"
 )
 
-//func initJaeger(service string, logger *zap.Logger) (opentracing.Tracer, io.Closer) {
+// func initJaeger(service string, logger *zap.Logger) (opentracing.Tracer, io.Closer) {
 func initJaeger(service string, logger l.Logger) (opentracing.Tracer, io.Closer) {
 	cfg := &config.Configuration{
 		ServiceName: service,
@@ -44,6 +44,8 @@ func main() {
 
 	tracer, closer := initJaeger("example", logger)
 	defer closer.Close()
+
+	opentracing.SetGlobalTracer(tracer)
 
 	//Initialize Stores
 	articleStore, err := store.NewArticleStore()

@@ -7,6 +7,8 @@ import (
 	"elastic/m"
 
 	"github.com/mitchellh/mapstructure"
+	"github.com/opentracing/opentracing-go"
+	"github.com/opentracing/opentracing-go/log"
 )
 
 type ArticleStore struct {
@@ -46,8 +48,12 @@ func (s ArticleStore) Search(ctx context.Context, query string) ([]m.Article, er
 }
 
 func (s ArticleStore) Get(ctx context.Context, id string) (m.Article, error) {
-	result, err := s.E.Get(ctx, id)
+	span, s_ctx := opentracing.StartSpanFromContext(ctx, "Article Store Get called")
+	defer span.Finish()
+
+	result, err := s.E.Get(s_ctx, id)
 	if err != nil {
+		span.LogFields(log.Error(err))
 		return m.Article{}, err
 	}
 	l.L(result)

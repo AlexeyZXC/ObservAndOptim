@@ -5,6 +5,7 @@ import (
 	"elastic/m"
 	"elastic/store"
 	"encoding/json"
+	"fmt"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
@@ -24,6 +25,7 @@ type ArticleHandler struct {
 func NewArticleHandler(s store.ArticleStore, t opentracing.Tracer) ArticleHandler {
 	return ArticleHandler{S: s, Tracer: t}
 }
+
 func (h ArticleHandler) Id(r render.Render, params martini.Params) (interface{}, error) {
 	id := params["id"]
 	ctx := context.Background()
@@ -36,11 +38,15 @@ func (h ArticleHandler) Id(r render.Render, params martini.Params) (interface{},
 }
 
 func (h ArticleHandler) Id_chi(w http.ResponseWriter, r *http.Request) {
-	span, ctx := opentracing.StartSpanFromContextWithTracer(r.Context(), h.Tracer, "Id path called")
+	span, ctx := opentracing.StartSpanFromContext(r.Context(), "Id path called")
 	defer span.Finish()
 
 	id := chi.URLParam(r, "id")
 	article, err := h.S.Get(ctx, id)
+
+	span.LogFields(log.String("id", id))
+	fmt.Println("Id_chi: ", id)
+
 	if err != nil {
 		span.LogFields(log.Error(err), log.String("id", id))
 		render_chi.Status(r, http.StatusInternalServerError)
