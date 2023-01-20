@@ -3,7 +3,6 @@ package e
 import (
 	"bytes"
 	"context"
-	"elastic/l"
 	"encoding/json"
 	"fmt"
 	"reflect"
@@ -13,15 +12,21 @@ import (
 	"github.com/google/uuid"
 )
 
+type iLogger interface {
+	Log(format string, a ...any)
+	Error(format string, a ...any)
+}
+
 type E struct {
 	C         *elasticsearch.Client
 	IndexName string
+	log       iLogger
 }
 
 type I interface{}
 type M map[string]I
 
-func NewE(indexName string) (E, error) {
+func NewE(indexName string, log iLogger) (E, error) {
 	client, err := elasticsearch.NewClient(elasticsearch.Config{
 		Addresses: []string{"http://127.0.0.1:9200"},
 	})
@@ -69,7 +74,9 @@ func (e E) Insert(ctx context.Context, i I) error {
 		return err
 	}
 	defer res.Body.Close()
-	l.L(res.Status())
+
+	//l.L(res.Status())
+	e.log.Log("e: Insert: Status: %v", res.Status())
 	return nil
 }
 func (e E) Search(ctx context.Context, q string) (SearchResponse, error) {
@@ -114,7 +121,8 @@ func (e E) Get(ctx context.Context, id string) (M, error) {
 		return nil, err
 	}
 	defer res.Body.Close()
-	l.L(res.Status())
+	//l.L(res.Status())
+	e.log.Log("e: Get: Status: %v", res.Status())
 	var r M
 	if err := json.NewDecoder(res.Body).Decode(&r); err != nil {
 		return nil, err

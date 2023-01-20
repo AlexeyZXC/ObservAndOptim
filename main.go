@@ -12,24 +12,25 @@ import (
 
 // Переписать не на Martini
 func main() {
+	// elastic logger
+	elLogger, err := l.NewElasticLogger()
+	if err != nil {
+		panic(err)
+	}
+	elLogger.Log("Starting...")
+
 	//Sentry error handler
 	//sentry.Init(sentry.Client(os.Getenv("SENTRY_DSN")))
+
 	//Initialize Stores
-	articleStore, err := store.NewArticleStore()
-	parseErr(err)
+	articleStore, err := store.NewArticleStore(elLogger)
+	if err != nil {
+		elLogger.Error("NewArticleStore creation failed: %v", err)
+		panic(err)
+	}
+
 	//Initialize Handlers
 	articleHandler := handler.NewArticleHandler(articleStore)
-	//Initialize Router
-	// m := martini.Classic()
-	// m.Use(render.Renderer())
-	// //Routes
-	// m.Get("/article/id/:id", articleHandler.Id)
-	// m.Post("/article/add", articleHandler.Add)
-	// m.Post("/article/search", articleHandler.Search)
-	// panicHandler := handler.PanicHandler{}
-	// m.Get("/panic", panicHandler.Handle)
-	// m.Post("/log/add", panicHandler.Log)
-	// m.Run()
 
 	// chi
 	r := chi.NewRouter()
@@ -39,17 +40,14 @@ func main() {
 	r.Get("Get", articleHandler.Id_chi)
 	r.Post("/article/add", articleHandler.Add_chi)
 	r.Post("/article/search", articleHandler.Search_chi)
+
 	//panic
 	panicHandler := handler.PanicHandler{}
 	r.Get("/panic", panicHandler.Handle_chi)
 	r.Post("/log/add", panicHandler.Log_chi)
 
+	//listen
+	elLogger.Log("Application started %v", 1)
 	http.ListenAndServe(":3333", r)
-}
-
-func parseErr(err error) {
-	if err != nil {
-		l.F(err)
-	}
-	l.Log.Log("Application started")
+	elLogger.Log("Application stopped %v", 2)
 }
