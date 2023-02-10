@@ -4,6 +4,7 @@ import (
 	"elastic/handler"
 	"elastic/l"
 	"elastic/store"
+	"fmt"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
@@ -15,6 +16,7 @@ func main() {
 	// elastic logger
 	elLogger, err := l.NewElasticLogger()
 	if err != nil {
+		fmt.Println("NewElasticLogger error: ", err)
 		panic(err)
 	}
 	elLogger.Log("Starting...")
@@ -37,7 +39,7 @@ func main() {
 	r.Use(render_chi.SetContentType(render_chi.ContentTypeJSON))
 
 	//routes
-	r.Get("Get", articleHandler.Id_chi)
+	//r.Get("Get", articleHandler.Id_chi)
 	r.Post("/article/add", articleHandler.Add_chi)
 	r.Post("/article/search", articleHandler.Search_chi)
 

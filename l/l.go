@@ -5,6 +5,7 @@ import (
 	"elastic/m"
 	"elastic/store_logs"
 	"fmt"
+	"time"
 )
 
 type ElLogger struct {
@@ -22,6 +23,10 @@ func NewElasticLogger() (ElLogger, error) {
 
 func (i ElLogger) Log(format string, a ...any) {
 	str := fmt.Sprintf("Info: "+format, a)
+
+	logTime := time.Now().Format("2006-01-02 15:04:03.000")
+	str = logTime + ": " + str
+
 	ctx := context.Background()
 	msg := m.Logs{Message: str}
 
@@ -31,6 +36,10 @@ func (i ElLogger) Log(format string, a ...any) {
 func (i ElLogger) Error(format string, a ...any) {
 	str := fmt.Sprintf("Error: "+format, a)
 	ctx := context.Background()
+
+	logTime := time.Now().Format("2006-01-02 15:04:03.000")
+	str = logTime + ": " + str
+
 	msg := m.Logs{Message: str}
 
 	i.store.Add(ctx, msg)

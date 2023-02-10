@@ -5,6 +5,7 @@ import (
 	"elastic/m"
 	"elastic/store"
 	"encoding/json"
+	"fmt"
 	"net/http"
 
 	"github.com/go-martini/martini"
@@ -70,6 +71,8 @@ func (h ArticleHandler) Add_chi(w http.ResponseWriter, r *http.Request) {
 	if err != nil {
 		render_chi.Status(r, http.StatusInternalServerError)
 		render_chi.JSON(w, r, err)
+		//render_chi.Render(w,r,ErrRender)
+		fmt.Println("add_chi error: ", err)
 		return
 	}
 	err = h.S.Add(ctx, article)
@@ -80,6 +83,10 @@ func (h ArticleHandler) Add_chi(w http.ResponseWriter, r *http.Request) {
 	}
 	render_chi.Status(r, http.StatusOK)
 	render_chi.JSON(w, r, article)
+}
+
+func NewInternalServerError(err error) {
+	panic("unimplemented")
 }
 
 type SearchRequest struct {
