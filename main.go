@@ -13,13 +13,14 @@ import (
 
 // Переписать не на Martini
 func main() {
+
 	// elastic logger
 	elLogger, err := l.NewElasticLogger()
 	if err != nil {
 		fmt.Println("NewElasticLogger error: ", err)
 		panic(err)
 	}
-	elLogger.Log("Starting...")
+	elLogger.Info("----- Starting... -----")
 
 	//Sentry error handler
 	//sentry.Init(sentry.Client(os.Getenv("SENTRY_DSN")))
@@ -32,7 +33,7 @@ func main() {
 	}
 
 	//Initialize Handlers
-	articleHandler := handler.NewArticleHandler(articleStore)
+	articleHandler := handler.NewArticleHandler(articleStore, elLogger)
 
 	// chi
 	r := chi.NewRouter()
@@ -44,12 +45,12 @@ func main() {
 	r.Post("/article/search", articleHandler.Search_chi)
 
 	//panic
-	panicHandler := handler.PanicHandler{}
+	panicHandler := handler.PanicHandler{Logger: elLogger}
 	r.Get("/panic", panicHandler.Handle_chi)
 	r.Post("/log/add", panicHandler.Log_chi)
 
 	//listen
-	elLogger.Log("Application started %v", 1)
+	elLogger.Info("Application started")
 	http.ListenAndServe(":3333", r)
-	elLogger.Log("Application stopped %v", 2)
+	elLogger.Info("Application stopped")
 }

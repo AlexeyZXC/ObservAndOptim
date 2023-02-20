@@ -16,17 +16,24 @@ import (
 )
 
 type ArticleHandler struct {
-	S store.ArticleStore
+	S      store.ArticleStore
+	logger iLogger
 }
 
-func NewArticleHandler(s store.ArticleStore) ArticleHandler {
-	return ArticleHandler{S: s}
+type iLogger interface {
+	Info(format string, a ...any)
+	Error(format string, a ...any)
+}
+
+func NewArticleHandler(s store.ArticleStore, logger iLogger) ArticleHandler {
+	return ArticleHandler{S: s, logger: logger}
 }
 func (h ArticleHandler) Id(r render.Render, params martini.Params) (interface{}, error) {
 	id := params["id"]
 	ctx := context.Background()
 	article, err := h.S.Get(ctx, id)
 	if err != nil {
+		h.logger.Error("ArticleHandler:Id err: %v", err)
 		return nil, err
 	}
 	r.JSON(http.StatusOK, article)
@@ -35,9 +42,11 @@ func (h ArticleHandler) Id(r render.Render, params martini.Params) (interface{},
 
 func (h ArticleHandler) Id_chi(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
+	h.logger.Info("ArticleHandler:Id_chi id: %v", id)
 	ctx := context.Background()
 	article, err := h.S.Get(ctx, id)
 	if err != nil {
+		h.logger.Error("ArticleHandler:Id_chi err: %v", err)
 		render_chi.Status(r, http.StatusInternalServerError)
 		render_chi.JSON(w, r, err)
 		return
@@ -52,11 +61,13 @@ func (h ArticleHandler) Add(r render.Render, req *http.Request) {
 	var article m.Article
 	err := json.NewDecoder(req.Body).Decode(&article)
 	if err != nil {
+		h.logger.Error("ArticleHandler:Add:Decode err: %v", err)
 		h.Err(r, err)
 		return
 	}
 	err = h.S.Add(ctx, article)
 	if err != nil {
+		h.logger.Error("ArticleHandler:Add:Add err: %v", err)
 		h.Err(r, err)
 		return
 	}
@@ -69,14 +80,19 @@ func (h ArticleHandler) Add_chi(w http.ResponseWriter, r *http.Request) {
 	var article m.Article
 	err := json.NewDecoder(r.Body).Decode(&article)
 	if err != nil {
+		h.logger.Error("ArticleHandler:Add_chi:Add Decode: %v", err)
 		render_chi.Status(r, http.StatusInternalServerError)
 		render_chi.JSON(w, r, err)
 		//render_chi.Render(w,r,ErrRender)
 		fmt.Println("add_chi error: ", err)
 		return
 	}
+
+	h.logger.Info("ArticleHandler:Add_chi article: %v", article)
+
 	err = h.S.Add(ctx, article)
 	if err != nil {
+		h.logger.Error("ArticleHandler:Add_chi:Add Add: %v", err)
 		render_chi.Status(r, http.StatusInternalServerError)
 		render_chi.JSON(w, r, err)
 		return
@@ -116,10 +132,13 @@ func (h ArticleHandler) Search_chi(w http.ResponseWriter, r *http.Request) {
 	var query SearchRequest
 	err := json.NewDecoder(r.Body).Decode(&query)
 	if err != nil {
+		h.logger.Error("ArticleHandler:Search_chi:Decode: %v", err)
 		render_chi.Status(r, http.StatusBadRequest)
 		render_chi.JSON(w, r, err)
 		return
 	}
+	h.logger.Info("ArticleHandler:Search_chi query.Query: %v", query.Query)
+
 	articles, err := h.S.Search(ctx, query.Query)
 	if err != nil {
 		render_chi.Status(r, http.StatusInternalServerError)

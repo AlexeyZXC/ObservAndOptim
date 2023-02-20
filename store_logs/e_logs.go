@@ -26,8 +26,8 @@ func NewE(indexName string) (E, error) {
 	client, err := elasticsearch.NewClient(elasticsearch.Config{
 		Addresses:              []string{"https://127.0.0.1:9200"},
 		Username:               "elastic",
-		Password:               "mUo+uJ=pibjG_452alzZ",
-		CertificateFingerprint: "a10f4050ca4ca2512df90e4b25274e4ad1b9ae9896e50c612063d34bfa63929c",
+		Password:               "Gfe14bA2eAysH7ErdRcv",
+		CertificateFingerprint: "f814e9a9f7964fb16c2a636d40aa8631580f910fb65bc01a5f94dd5a23a63e44",
 	})
 	if err != nil {
 		return E{}, err

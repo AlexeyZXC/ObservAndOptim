@@ -2,16 +2,20 @@ package store_logs
 
 import (
 	"context"
-	//"elastic/e"
+	"elastic/e"
 	"elastic/m"
+	"elastic/simpleLog"
 )
 
 type LogsStore struct {
-	E E
+	//E E
+	E e.E
 }
 
 func NewLogsStore() (LogsStore, error) {
-	e, err := NewE("logs")
+	simpleLog := simpleLog.NewSimpleLogger()
+
+	e, err := e.NewE("logs", simpleLog)
 	if err != nil {
 		return LogsStore{}, err
 	}

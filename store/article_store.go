@@ -9,7 +9,7 @@ import (
 )
 
 type iLogger interface {
-	Log(format string, a ...any)
+	Info(format string, a ...any)
 	Error(format string, a ...any)
 }
 
@@ -56,7 +56,7 @@ func (s ArticleStore) Get(ctx context.Context, id string) (m.Article, error) {
 		return m.Article{}, err
 	}
 	//l.L(result)
-	s.log.Log("Article store: Get: result: %v", result)
+	s.log.Info("Article store: Get: result: %v", result)
 	var article m.Article
 	// err = mapstructure.Decode(result.Source, &article)
 	// if err != nil {
