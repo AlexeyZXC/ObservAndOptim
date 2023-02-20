@@ -3,18 +3,23 @@ package store
 import (
 	"context"
 	"elastic/e"
-	"elastic/l"
 	"elastic/m"
 
 	"github.com/mitchellh/mapstructure"
 )
 
-type ArticleStore struct {
-	E e.E
+type iLogger interface {
+	Info(format string, a ...any)
+	Error(format string, a ...any)
 }
 
-func NewArticleStore() (ArticleStore, error) {
-	e, err := e.NewE("articles")
+type ArticleStore struct {
+	E   e.E
+	log iLogger
+}
+
+func NewArticleStore(log iLogger) (ArticleStore, error) {
+	e, err := e.NewE("articles", log)
 	if err != nil {
 		return ArticleStore{}, err
 	}
@@ -50,7 +55,8 @@ func (s ArticleStore) Get(ctx context.Context, id string) (m.Article, error) {
 	if err != nil {
 		return m.Article{}, err
 	}
-	l.L(result)
+	//l.L(result)
+	s.log.Info("Article store: Get: result: %v", result)
 	var article m.Article
 	// err = mapstructure.Decode(result.Source, &article)
 	// if err != nil {

@@ -3,7 +3,6 @@ package e
 import (
 	"bytes"
 	"context"
-	"elastic/l"
 	"encoding/json"
 	"fmt"
 	"reflect"
@@ -13,17 +12,26 @@ import (
 	"github.com/google/uuid"
 )
 
+type iLogger interface {
+	Info(format string, a ...any)
+	Error(format string, a ...any)
+}
+
 type E struct {
 	C         *elasticsearch.Client
 	IndexName string
+	log       iLogger
 }
 
 type I interface{}
 type M map[string]I
 
-func NewE(indexName string) (E, error) {
+func NewE(indexName string, log iLogger) (E, error) {
 	client, err := elasticsearch.NewClient(elasticsearch.Config{
-		Addresses: []string{"http://127.0.0.1:9200"},
+		Addresses:              []string{"https://127.0.0.1:9200"},
+		Username:               "elastic",
+		Password:               "Gfe14bA2eAysH7ErdRcv",
+		CertificateFingerprint: "f814e9a9f7964fb16c2a636d40aa8631580f910fb65bc01a5f94dd5a23a63e44",
 	})
 	if err != nil {
 		return E{}, err
@@ -36,17 +44,20 @@ func NewE(indexName string) (E, error) {
 	return E{
 		C:         client,
 		IndexName: indexName,
+		log:       log,
 	}, nil
 }
 
 func (e E) Info() (M, error) {
 	res, err := e.C.Info()
 	if err != nil {
+		e.log.Error("e.Info(): %v", err.Error())
 		return nil, err
 	}
 	defer res.Body.Close()
 	var r M
 	if err := json.NewDecoder(res.Body).Decode(&r); err != nil {
+		e.log.Error("e.Info().json Decode: %v", err.Error())
 		return nil, err
 	}
 	return r, nil
@@ -55,6 +66,7 @@ func (e E) Info() (M, error) {
 func (e E) Insert(ctx context.Context, i I) error {
 	data, err := json.Marshal(i)
 	if err != nil {
+		e.log.Error("e.Insert(): %v", err.Error())
 		return err
 	}
 	id := e.GetId(i)
@@ -66,10 +78,13 @@ func (e E) Insert(ctx context.Context, i I) error {
 	}
 	res, err := req.Do(ctx, e.C)
 	if err != nil {
+		e.log.Error("e.Do(): %v", err.Error())
 		return err
 	}
 	defer res.Body.Close()
-	l.L(res.Status())
+
+	//l.L(res.Status())
+	e.log.Info("e: Insert: Status: %v", res.Status())
 	return nil
 }
 func (e E) Search(ctx context.Context, q string) (SearchResponse, error) {
@@ -83,6 +98,7 @@ func (e E) Search(ctx context.Context, q string) (SearchResponse, error) {
 		},
 	}
 	if err := json.NewEncoder(&buf).Encode(query); err != nil {
+		e.log.Error("e.Search.Encode: %v", err.Error())
 		return r, err
 	}
 
@@ -95,11 +111,13 @@ func (e E) Search(ctx context.Context, q string) (SearchResponse, error) {
 		e.C.Search.WithPretty(),
 	)
 	if err != nil {
+		e.log.Error("e.Search: %v", err.Error())
 		return r, err
 	}
 	defer res.Body.Close()
 
 	if err := json.NewDecoder(res.Body).Decode(&r); err != nil {
+		e.log.Error("e.Search.decode: %v", err.Error())
 		return r, err
 	}
 	return r, nil
@@ -114,7 +132,8 @@ func (e E) Get(ctx context.Context, id string) (M, error) {
 		return nil, err
 	}
 	defer res.Body.Close()
-	l.L(res.Status())
+	//l.L(res.Status())
+	e.log.Info("e: Get: Status: %v", res.Status())
 	var r M
 	if err := json.NewDecoder(res.Body).Decode(&r); err != nil {
 		return nil, err
