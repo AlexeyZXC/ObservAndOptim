@@ -5,7 +5,6 @@ import (
 	"elastic/m"
 	"elastic/store"
 	"encoding/json"
-	"fmt"
 	"net/http"
 
 	"github.com/go-chi/chi/v5"
@@ -20,10 +19,19 @@ import (
 type ArticleHandler struct {
 	S      store.ArticleStore
 	Tracer opentracing.Tracer
+	L      Logger
 }
 
-func NewArticleHandler(s store.ArticleStore, t opentracing.Tracer) ArticleHandler {
-	return ArticleHandler{S: s, Tracer: t}
+type Logger interface {
+	// Error logs a message at error priority
+	Error(msg string)
+
+	// Infof logs a message at info priority
+	Infof(msg string, args ...interface{})
+}
+
+func NewArticleHandler(s store.ArticleStore, t opentracing.Tracer, l Logger) ArticleHandler {
+	return ArticleHandler{S: s, Tracer: t, L: l}
 }
 
 func (h ArticleHandler) Id(r render.Render, params martini.Params) (interface{}, error) {
@@ -44,8 +52,10 @@ func (h ArticleHandler) Id_chi(w http.ResponseWriter, r *http.Request) {
 	id := chi.URLParam(r, "id")
 	article, err := h.S.Get(ctx, id)
 
+	h.L.Infof("Id_chi: id: %v", id)
+
 	span.LogFields(log.String("id", id))
-	fmt.Println("Id_chi: ", id)
+	//fmt.Println("Id_chi: ", id)
 
 	if err != nil {
 		span.LogFields(log.Error(err), log.String("id", id))

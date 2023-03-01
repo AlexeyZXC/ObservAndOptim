@@ -51,7 +51,7 @@ func main() {
 	articleStore, err := store.NewArticleStore()
 	parseErr(err, &logger)
 	//Initialize Handlers
-	articleHandler := handler.NewArticleHandler(articleStore, tracer)
+	articleHandler := handler.NewArticleHandler(articleStore, tracer, logger)
 
 	// chi
 	r := chi.NewRouter()
