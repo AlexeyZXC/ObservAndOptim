@@ -1,39 +1,37 @@
 package main
 
 import (
-	"elastic/handler"
-	"elastic/l"
-	"elastic/store"
+	"context"
+	"geekbrains/app"
+	"log"
 
-	"github.com/go-martini/martini"
-	"github.com/martini-contrib/render"
+	"go.uber.org/zap"
 )
 
-// Переписать не на Martini
-func main() {
-	//Sentry error handler
-	//sentry.Init(sentry.Client(os.Getenv("SENTRY_DSN")))
-	//Initialize Stores
-	articleStore, err := store.NewArticleStore()
-	parseErr(err)
-	//Initialize Handlers
-	articleHandler := handler.NewArticleHandler(articleStore)
-	//Initialize Router
-	m := martini.Classic()
-	m.Use(render.Renderer())
-	//Routes
-	m.Get("/article/id/:id", articleHandler.Id)
-	m.Post("/article/add", articleHandler.Add)
-	m.Post("/article/search", articleHandler.Search)
-	panicHandler := handler.PanicHandler{}
-	m.Get("/panic", panicHandler.Handle)
-	m.Post("/log/add", panicHandler.Log)
-	m.Run()
-}
+//TODO: сделать на ElasticSearch
+//TODO: сделать полнотекстовый поиск для пользователей и статей пользователя
 
-func parseErr(err error) {
+func main() {
+	// Предустановленный конфиг. Можно выбрать
+	//NewProduction/NewDevelopment/NewExample или создать свой
+	// Production - уровень логгирования InfoLevel, формат вывода: json
+	// Development - уровень логгирования DebugLevel, формат вывода: console
+	logger, err := zap.NewDevelopment()
 	if err != nil {
-		l.F(err)
+		log.Fatal(err)
 	}
-	l.Log.Log("Application started")
+	defer func() { _ = logger.Sync() }()
+	// можно установить глобальный логгер (но лучше не надо: используйте внедрение
+	//зависимостей где это возможно)
+	// undo := zap.ReplaceGlobals(logger)
+	// defer undo()
+	//
+	// zap.L().Info("replaced zap's global loggers")
+	a := app.App{}
+	if err := a.Init(context.Background(), logger); err != nil {
+		log.Fatal(err)
+	}
+	if err := a.Serve(); err != nil {
+		log.Fatal(err)
+	}
 }
