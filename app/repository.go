@@ -121,5 +121,9 @@ func (r *repository) GetUserArticles(ctx context.Context, userID uuid.UUID) ([]A
 	return ret, nil
 }
 func NewRepository(pool *pgxpool.Pool) Repository {
+	//todo: what if return value:
+	// return repository{pool: pool}
+	// and replace all:
+	// "func (r *repository) GetUserArticles" with values: "func (r repository) GetUserArticles"
 	return &repository{pool: pool}
 }

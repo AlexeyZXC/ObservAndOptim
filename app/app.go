@@ -78,6 +78,7 @@ func (a *App) userHandler(w http.ResponseWriter, r *http.Request) {
 	}
 	writeJsonResponse(w, http.StatusOK, user)
 }
+
 func (a *App) userArticlesHandler(w http.ResponseWriter, r *http.Request) {
 	a.logger.Info("userArticlesHandler called", zap.Field{Key: "method", String: r.Method, Type: zapcore.StringType})
 	userID, err := a.parseUserID(r)
@@ -94,6 +95,7 @@ user's (id: %s) articles: %s`, userID, err))
 	}
 	writeJsonResponse(w, http.StatusOK, articles)
 }
+
 func (a *App) panicHandler(w http.ResponseWriter, r *http.Request) {
 	defer func() {
 		_ = recover()
@@ -101,6 +103,7 @@ func (a *App) panicHandler(w http.ResponseWriter, r *http.Request) {
 	}()
 	a.logger.Panic("panic!!!")
 }
+
 func (a *App) Init(ctx context.Context, logger *zap.Logger) error {
 	config, err := pgxpool.ParseConfig(DatabaseURL)
 	if err != nil {
@@ -117,11 +120,12 @@ func (a *App) Init(ctx context.Context, logger *zap.Logger) error {
 	a.repository = NewCachedRepository(NewRepository(a.pool))
 	return a.repository.InitSchema(ctx)
 }
+
 func (a *App) Serve() error {
 	r := chi.NewRouter()
 	//TODO: сделать полнотекстовым
 	r.Get("/users", http.HandlerFunc(a.usersHandler))
-	r.Get("/users/{id}", http.HandlerFunc(a.userHandler))
+	r.Get("/user/{id}", http.HandlerFunc(a.userHandler))
 	//TODO: сделать полнотекстовым
 	r.Get("/users/{id}/articles", http.HandlerFunc(a.userArticlesHandler))
 	r.Get("/panic", http.HandlerFunc(a.panicHandler))
@@ -132,6 +136,7 @@ func (a *App) Serve() error {
 	r.Mount("/debug", Profiler())
 	return http.ListenAndServe("0.0.0.0:9000", r)
 }
+
 func Profiler() http.Handler {
 	r := chi.NewRouter()
 	r.Get("/", func(w http.ResponseWriter, r *http.Request) {
