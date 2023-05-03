@@ -3,6 +3,7 @@ package app
 import (
 	"context"
 	"fmt"
+	"geekbrains/internal/models"
 	"sync"
 	"time"
 
@@ -15,15 +16,17 @@ type cachedRepository struct {
 	repository   Repository
 	cache        *cache.Cache
 	getUsersList []string
-	M            *sync.Mutex
+	// M            *sync.Mutex
+	M sync.Mutex
 }
 
 func (r *cachedRepository) InitSchema(ctx context.Context) error {
 	return r.repository.InitSchema(ctx)
 }
-func (r *cachedRepository) GetUser(ctx context.Context, id uuid.UUID) (*User, error) {
+
+func (r *cachedRepository) GetUser(ctx context.Context, id uuid.UUID) (*models.User, error) {
 	key := fmt.Sprintf("user:%s", id)
-	var user User
+	var user models.User
 	err := r.cache.Get(ctx, key, &user)
 	switch err {
 	case nil:
@@ -38,7 +41,8 @@ func (r *cachedRepository) GetUser(ctx context.Context, id uuid.UUID) (*User, er
 			Ctx:   ctx,
 			Key:   key,
 			Value: dbUser,
-			TTL:   time.Hour,
+			// TTL:   time.Hour,
+			TTL: 2 * time.Second,
 		})
 		if err != nil {
 			return nil, err
@@ -48,12 +52,12 @@ func (r *cachedRepository) GetUser(ctx context.Context, id uuid.UUID) (*User, er
 	return nil, err
 }
 
-//TODO: кэшировать запрос
-func (r *cachedRepository) GetUsers(ctx context.Context) ([]User, error) {
+// TODO: кэшировать запрос
+func (r *cachedRepository) GetUsers(ctx context.Context) ([]models.User, error) {
 
 	query := ""
 	key := fmt.Sprintf("getUsers:%s", query)
-	var users []User
+	var users []models.User
 	err := r.cache.Get(ctx, key, &users)
 	switch err {
 	case nil:
@@ -68,7 +72,7 @@ func (r *cachedRepository) GetUsers(ctx context.Context) ([]User, error) {
 			Ctx:   ctx,
 			Key:   key,
 			Value: dbUsers,
-			TTL:   time.Hour,
+			TTL:   2 * time.Second,
 		})
 		if err != nil {
 			return nil, err
@@ -81,9 +85,9 @@ func (r *cachedRepository) GetUsers(ctx context.Context) ([]User, error) {
 	return nil, err
 }
 
-func (r *cachedRepository) GetUserArticles(ctx context.Context, userID uuid.UUID) ([]Article, error) {
+func (r *cachedRepository) GetUserArticles(ctx context.Context, userID uuid.UUID) ([]models.Article, error) {
 	key := fmt.Sprintf("user_articles:%s", userID)
-	var articles []Article
+	var articles []models.Article
 	err := r.cache.Get(ctx, key, &articles)
 	switch err {
 	case nil:
@@ -97,7 +101,7 @@ func (r *cachedRepository) GetUserArticles(ctx context.Context, userID uuid.UUID
 			Ctx:   ctx,
 			Key:   key,
 			Value: dbArticles,
-			TTL:   time.Hour,
+			TTL:   2 * time.Second,
 		})
 		if err != nil {
 			return nil, err
@@ -106,16 +110,41 @@ func (r *cachedRepository) GetUserArticles(ctx context.Context, userID uuid.UUID
 	}
 	return nil, err
 }
-func (r *cachedRepository) InsertUser(ctx context.Context, user User) (*User, error) {
-	r.M.Lock()
-	getUsersList := []string{}
-	copy(getUsersList, r.getUsersList)
-	r.M.Unlock()
-	for _, key := range getUsersList {
-		r.cache.Delete(ctx, key)
+
+func (r *cachedRepository) AddUser(ctx context.Context, user models.User) (uuid.UUID, error) {
+	// r.M.Lock()
+	// getUsersList := []string{}
+	// copy(getUsersList, r.getUsersList)
+	// r.M.Unlock()
+	// for _, key := range getUsersList {
+	// 	r.cache.Delete(ctx, key)
+	// }
+
+	var dbErr error
+
+	user.ID, dbErr = r.repository.AddUser(ctx, user)
+	if dbErr != nil {
+		return uuid.UUID{}, dbErr
 	}
-	//TODO: вызвать репозиторий
-	return nil, nil
+
+	key := fmt.Sprintf("user:%s", user.ID)
+	err := r.cache.Set(&cache.Item{
+		Ctx:   ctx,
+		Key:   key,
+		Value: user,
+		TTL:   2 * time.Second,
+	})
+
+	if err != nil {
+		return uuid.UUID{}, err
+	}
+
+	return user.ID, nil
+}
+
+func (r *cachedRepository) AddUserArticle(ctx context.Context, article models.Article) (uuid.UUID, error) {
+	// todo
+	return uuid.UUID{}, nil
 }
 
 func NewCachedRepository(repository Repository) Repository {
@@ -126,7 +155,7 @@ func NewCachedRepository(repository Repository) Repository {
 	})
 	rCache := cache.New(&cache.Options{
 		Redis:      rdb,
-		LocalCache: cache.NewTinyLFU(1000, time.Minute),
+		LocalCache: cache.NewTinyLFU(1000, time.Second),
 	})
 	return &cachedRepository{
 		repository:   repository,

@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"geekbrains/internal/models"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v4/pgxpool"
@@ -60,16 +61,17 @@ type repository struct {
 	pool *pgxpool.Pool
 }
 
-//TODO: сделать на ElasticSearch
-//TODO: сделать полнотекстовый поиск для пользователей и статей пользователя
+// TODO: сделать на ElasticSearch
+// TODO: сделать полнотекстовый поиск для пользователей и статей пользователя
 func (r *repository) InitSchema(ctx context.Context) error {
 	_, err := r.pool.Exec(ctx, DDL)
 	return err
 }
-func (r *repository) GetUser(ctx context.Context, id uuid.UUID) (*User, error) {
+
+func (r *repository) GetUser(ctx context.Context, id uuid.UUID) (*models.User, error) {
 	rows, _ := r.pool.Query(ctx, UserByIDSelect, id)
 	var (
-		user  User
+		user  models.User
 		found bool
 	)
 	for rows.Next() {
@@ -89,11 +91,12 @@ func (r *repository) GetUser(ctx context.Context, id uuid.UUID) (*User, error) {
 	}
 	return &user, nil
 }
-func (r *repository) GetUsers(ctx context.Context) ([]User, error) {
+
+func (r *repository) GetUsers(ctx context.Context) ([]models.User, error) {
 	rows, _ := r.pool.Query(ctx, UsersSelect)
-	ret := make([]User, 0)
+	ret := make([]models.User, 0)
 	for rows.Next() {
-		var user User
+		var user models.User
 		if err := rows.Scan(&user.ID, &user.Name); err != nil {
 			return nil, err
 		}
@@ -104,11 +107,12 @@ func (r *repository) GetUsers(ctx context.Context) ([]User, error) {
 	}
 	return ret, nil
 }
-func (r *repository) GetUserArticles(ctx context.Context, userID uuid.UUID) ([]Article, error) {
+
+func (r *repository) GetUserArticles(ctx context.Context, userID uuid.UUID) ([]models.Article, error) {
 	rows, _ := r.pool.Query(ctx, UserArticlesSelect, userID)
-	ret := make([]Article, 0)
+	ret := make([]models.Article, 0)
 	for rows.Next() {
-		var article Article
+		var article models.Article
 		if err := rows.Scan(&article.ID, &article.Title, &article.Text,
 			&article.UserID); err != nil {
 			return nil, err
@@ -120,6 +124,15 @@ func (r *repository) GetUserArticles(ctx context.Context, userID uuid.UUID) ([]A
 	}
 	return ret, nil
 }
+
+func (r *repository) AddUser(ctx context.Context, user models.User) (uuid.UUID, error) {
+	return uuid.UUID{}, nil
+}
+
+func (r *repository) AddUserArticle(ctx context.Context, article models.Article) (uuid.UUID, error) {
+	return uuid.UUID{}, nil
+}
+
 func NewRepository(pool *pgxpool.Pool) Repository {
 	//todo: what if return value:
 	// return repository{pool: pool}

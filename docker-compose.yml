@@ -1,20 +1,20 @@
 version: '3.1'
 services:
-  db:
-    image: postgres
-    restart: always
-    ports:
-      - 5432:5432
-    environment:
-      POSTGRES_DB: example
-      POSTGRES_USER: usr
-      POSTGRES_PASSWORD: pwd
+  # db:
+  #   image: postgres
+  #   restart: always
+  #   ports:
+  #     - 5432:5432
+  #   environment:
+  #     POSTGRES_DB: example
+  #     POSTGRES_USER: usr
+  #     POSTGRES_PASSWORD: pwd
 
-  adminer:
-    image: adminer
-    restart: always
-    ports:
-      - 8080:8080
+  # adminer:
+  #   image: adminer
+  #   restart: always
+  #   ports:
+  #     - 8080:8080
   jaeger:
     image: jaegertracing/all-in-one:latest
     ports:
@@ -24,3 +24,66 @@ services:
     image: "redis:alpine"
     ports:
       - 6379:6379
+  elasticsearch:
+# euser 123456
+
+#   Changed password for user apm_system
+# PASSWORD apm_system = ayQPWL5EE67An5q6u8Hy
+
+# Changed password for user kibana_system
+# PASSWORD kibana_system = ApN1rKPjAW3n4ZR8203b
+
+# Changed password for user kibana
+# PASSWORD kibana = ApN1rKPjAW3n4ZR8203b
+
+# Changed password for user logstash_system
+# PASSWORD logstash_system = fcoFp0STGGLV37fRyBlL
+
+# Changed password for user beats_system
+# PASSWORD beats_system = f48KUf8Ux3ZttoxW1nrd
+
+# Changed password for user remote_monitoring_user
+# PASSWORD remote_monitoring_user = rCrwQJkbOn3IiJbCC9Ji
+
+# Changed password for user elastic
+# PASSWORD elastic = ZvVx8w0v6CCtOFHK0477
+
+    image: elasticsearch:8.3.3
+    container_name: elasticsearch
+    environment:
+      - xpack.security.enrollment.enabled=true
+      # - xpack.security.enabled=false      
+      # - xpack.security.enabled=true
+      - discovery.type=single-node
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+      nofile:
+        soft: 65536
+        hard: 65536
+    cap_add:
+      - IPC_LOCK
+    volumes:
+      - ./elasticsearch-data:/usr/share/elasticsearch/data
+    networks:
+      - elastic
+    ports:
+      - 9200:9200
+      - 9300:9300
+  kibana:
+    container_name: kibana
+    image: kibana:8.3.3
+    # environment:
+    #   ELASTICSEARCH_URL: http://localhost:9200
+    #   ELASTICSEARCH_HOSTS: http://localhost:9200
+    # volumes:
+    #   - ./kibana.yml:/usr/share/kibana/config/kibana.yml
+    ports:
+      - 5601:5601
+    depends_on:
+      - elasticsearch
+    networks:
+      - elastic
+networks:
+  elastic:

@@ -13,7 +13,7 @@ import (
 
 func main() {
 	// Предустановленный конфиг. Можно выбрать
-	//NewProduction/NewDevelopment/NewExample или создать свой
+	// NewProduction/NewDevelopment/NewExample или создать свой
 	// Production - уровень логгирования InfoLevel, формат вывода: json
 	// Development - уровень логгирования DebugLevel, формат вывода: console
 	logger, err := zap.NewDevelopment()
