@@ -9,7 +9,6 @@ import (
 	"geekbrains/store"
 	"net/http"
 	"net/http/pprof"
-	"strconv"
 
 	"github.com/go-chi/chi/v5"
 	"github.com/go-chi/render"
@@ -52,7 +51,7 @@ func (a *App) usersHandler(w http.ResponseWriter, r *http.Request) {
 	a.logger.Info("usersHandler called", zap.Field{Key: "method", String: r.Method, Type: zapcore.StringType})
 	ctx := r.Context()
 	users, err := a.repository.GetUsers(ctx)
-	a.logger.Info("users len: " + strconv.Itoa(len(users)))
+	// a.logger.Info("users len: " + strconv.Itoa(len(users)))
 
 	if err != nil {
 		msg := fmt.Sprintf(`failed to get users: %s`, err)
@@ -83,6 +82,10 @@ func (a *App) userHandler(w http.ResponseWriter, r *http.Request) {
 			writeResponse(w, status, fmt.Sprintf(`failed to get user with id %s: %s`, userID, err))
 			return
 		}
+		if user == nil {
+			writeResponse(w, http.StatusNotFound, fmt.Sprintf(`No user with id %s`, userID))
+			return
+		}
 		writeJsonResponse(w, http.StatusOK, user)
 	}
 
@@ -95,6 +98,8 @@ func (a *App) userHandler(w http.ResponseWriter, r *http.Request) {
 			render.JSON(w, r, err)
 			return
 		}
+
+		user.GenerateID()
 
 		user.ID, err = a.repository.AddUser(ctx, user)
 		if err != nil {
@@ -113,42 +118,46 @@ func (a *App) articleHandler(w http.ResponseWriter, r *http.Request) {
 
 	//todo: user -> article
 	if r.Method == "GET" {
-		userID, err := a.parseUserID(r)
-		if err != nil {
-			writeResponse(w, http.StatusBadRequest, fmt.Sprintf(`failed to parse user's	id: %s`, err))
-			return
-		}
-		user, err := a.repository.GetUser(ctx, *userID)
-		if err != nil {
-			status := http.StatusInternalServerError
-			switch {
-			case errors.Is(err, ErrNotFound):
-				status = http.StatusNotFound
-			}
-			writeResponse(w, status, fmt.Sprintf(`failed to get user with id %s: %s`, userID, err))
-			return
-		}
-		writeJsonResponse(w, http.StatusOK, user)
+		// userID, err := a.parseUserID(r)
+		// if err != nil {
+		// 	writeResponse(w, http.StatusBadRequest, fmt.Sprintf(`failed to parse user's	id: %s`, err))
+		// 	return
+		// }
+		// user, err := a.repository.GetUser(ctx, *userID)
+		// if err != nil {
+		// 	status := http.StatusInternalServerError
+		// 	switch {
+		// 	case errors.Is(err, ErrNotFound):
+		// 		status = http.StatusNotFound
+		// 	}
+		// 	writeResponse(w, status, fmt.Sprintf(`failed to get user with id %s: %s`, userID, err))
+		// 	return
+		// }
+		// writeJsonResponse(w, http.StatusOK, user)
+		render.Status(r, http.StatusInternalServerError)
+		render.JSON(w, r, errors.New("use get user's articles request instead"))
+		return
 	}
 
 	if r.Method == "POST" {
 		defer r.Body.Close()
-		var user models.User
-		err := json.NewDecoder(r.Body).Decode(&user)
+		var article models.Article
+		err := json.NewDecoder(r.Body).Decode(&article)
 		if err != nil {
 			render.Status(r, http.StatusInternalServerError)
 			render.JSON(w, r, err)
 			return
 		}
 
-		user.ID, err = a.repository.AddUser(ctx, user)
+		article.GenerateID()
+		article.ID, err = a.repository.AddUserArticle(ctx, article)
 		if err != nil {
 			render.Status(r, http.StatusInternalServerError)
 			render.JSON(w, r, err)
 			return
 		}
 		render.Status(r, http.StatusOK)
-		render.JSON(w, r, user)
+		render.JSON(w, r, article)
 	}
 }
 
@@ -213,9 +222,10 @@ func (a *App) Serve() error {
 	//TODO: сделать полнотекстовым
 	r.Get("/users", http.HandlerFunc(a.usersHandler))
 	r.Get("/user/{id}", http.HandlerFunc(a.userHandler))
+
 	//TODO: сделать полнотекстовым
-	// r.Get("/user/{id}/articles", http.HandlerFunc(a.userArticlesHandler))
-	r.Get("/user/articles", http.HandlerFunc(a.userArticlesHandler))
+	r.Get("/user/{id}/articles", http.HandlerFunc(a.userArticlesHandler))
+	// r.Get("/user/articles", http.HandlerFunc(a.userArticlesHandler))
 	r.Get("/panic", http.HandlerFunc(a.panicHandler))
 
 	//TODO: сделать запрос на создание пользователя
